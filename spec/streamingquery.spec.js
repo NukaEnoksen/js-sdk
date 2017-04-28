@@ -1484,6 +1484,95 @@ describe("Streaming Queries", function() {
     });
   });
 
+  it("should resubscribe when out of slack", function() {
+    this.timeout(20000);
+
+    // Create 1000 items
+    var items = [];
+    for (var i = 0; i < 1000; i++) {
+      items.push(new db[bucket]({name: 'resubscription fixes problem ' + i, age: i}));
+    }
+
+    var result, otherEvents = [], completions = 0, otherCompletions = 0, errors = 0, otherErrors = 0;
+    var onNext = function(r) {
+      result = r;
+    };
+    var onOtherNext = function(event) {
+      otherEvents.push(event);
+    };
+    var onError = function(r) {
+      errors++;
+    };
+    var onOtherError = function(r) {
+      otherErrors++;
+    };
+    var onComplete = function(r) {
+      completions++;
+    };
+    var onOtherComplete = function(r) {
+      otherCompletions++;
+    };
+    query = db[bucket].find().matches('name', /^resubscription fixes problem/)
+        .ascending('age')
+        .offset(499)
+        .limit(1);
+
+    var removeItems = function(n) {
+      n = n || items.length;
+      var deletions = [];
+      for (var i = 0; i < n; i++) {
+        deletions.push(items.shift());
+      }
+      return Promise.all(deletions.map(function(entity) {
+        return entity.delete({force: true});
+      })).then(function() {
+        return helper.sleep(t);
+      });
+    };
+
+
+    var item500 = items[499], item501 = items[500], item1000 = items[999];
+
+    return Promise.all(items.map(function(entity) {
+      return entity.insert();
+    })).then(function() {
+      return helper.sleep(t);
+    }).then(function() {
+      subscription = query.resultStream(onNext, onError, onComplete);
+      otherSubscription = query.eventStream(onOtherNext, onOtherError, onOtherComplete);
+      return helper.sleep(t);
+    }).then(function() {
+      expect(result.length).to.be.equal(1);
+      expect(completions).to.be.equal(0);
+      expect(errors).to.be.equal(0);
+      expect(otherEvents.length).to.be.equal(1);
+      expect(result[0]).to.be.eql(item500);
+      expect(otherEvents[0].data).to.be.eql(item500);
+      return removeItems(1);
+    }).then(function() {
+      expect(completions).to.be.equal(0);
+      expect(errors).to.be.equal(0);
+      expect(result.length).to.be.equal(1);
+      expect(result[0]).to.be.eql(item501);
+      return removeItems(499);
+    }).then(function() {
+      expect(completions).to.be.equal(0);
+      expect(errors).to.be.equal(0);
+      expect(result.length).to.be.equal(1);
+      expect(result[0]).to.be.eql(item1000);
+      return removeItems();
+    }).then(function() {
+      expect(completions).to.be.equal(0);
+      expect(errors).to.be.equal(0);
+      expect(result.length).to.be.equal(0);
+      expect(otherCompletions).to.be.equal(0);
+      expect(otherErrors).to.be.equal(1);
+    }).catch(function() {
+      removeItems();
+      return should.be.rejected;
+    });
+  });
+
   it("should work with minimal signature", function() {
     this.timeout(6000);
 

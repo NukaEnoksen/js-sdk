@@ -13,7 +13,7 @@ describe("Streaming Queries", function() {
   }
 
   var Stream = DB.query.Stream;
-  var t = 1000;
+  var t = 2000;
   var bucket = helper.randomize("StreamingQueryPerson");
   var emf, metamodel, db, otherDb, query, otherQuery, stream, otherStream, subscription, otherSubscription, websocket, otherWebsocket;
   var sameForAll = helper.randomize("same for all persons in the current test");
@@ -30,6 +30,22 @@ describe("Streaming Queries", function() {
       setTimeout(function() {
         sub.unsubscribe();
         reject(new Error('Wait on event timed out.'));
+      }, t);
+    });
+  }
+
+  function expectSubscription() {
+    return new Promise(function(resolve, reject) {
+      var sub = query.resultStream(function(e) {
+        sub.unsubscribe();
+        setTimeout(function() {
+          resolve(e);
+        }, 100);
+      });
+
+      setTimeout(function() {
+        sub.unsubscribe();
+        reject(new Error('Wait on subscription timed out.'));
       }, t);
     });
   }
@@ -377,7 +393,7 @@ describe("Streaming Queries", function() {
     });
 
     it("should use websocket configuration of the connect script", function() {
-      this.timeout(10000);
+      this.timeout(20000);
       return new DB.EntityManagerFactory({
         host: env.TEST_SERVER,
         schema: {},
@@ -390,7 +406,7 @@ describe("Streaming Queries", function() {
     });
 
     it("should unsubscribe resultStream immediately", function() {
-      this.timeout(10000);
+      this.timeout(20000);
       var result, inserts;
 
       // Insert a bunch of elements
@@ -434,7 +450,7 @@ describe("Streaming Queries", function() {
     beforeEach(clearSubs);
 
     it("should return updated object", function() {
-      this.timeout(10000);
+      this.timeout(20000);
       sameForAll = helper.randomize(this.test.title);
       var result;
       query = db[bucket].find().equal('testID', sameForAll);
@@ -444,7 +460,7 @@ describe("Streaming Queries", function() {
       });
       var person = newPerson(29, "Feelliiix");
 
-      return helper.sleep(t).then(function() {
+      return expectSubscription().then(function() {
         var event = expectNoEvent();
         person.insert();
         return event;
@@ -466,7 +482,7 @@ describe("Streaming Queries", function() {
     });
 
     it("should maintain offset", function() {
-      this.timeout(10000);
+      this.timeout(20000);
       sameForAll = helper.randomize(this.test.title);
       var results = [];
       query = db[bucket].find().equal('testID', sameForAll).limit(2).offset(1).ascending("name");
@@ -531,7 +547,7 @@ describe("Streaming Queries", function() {
     });
 
     it("should return ordered result", function() {
-      this.timeout(10000);
+      this.timeout(20000);
       sameForAll = helper.randomize(this.test.title);
 
       var results = [];
@@ -551,7 +567,7 @@ describe("Streaming Queries", function() {
         results.push(e);
       });
 
-      return helper.sleep(t).then(function() {
+      return expectSubscription().then(function() {
         var event = expectEvent();
         al.insert();
         return event;
@@ -604,7 +620,7 @@ describe("Streaming Queries", function() {
     });
 
     it("should return 'none'-operation matches", function() {
-      this.timeout(10000);
+      this.timeout(20000);
       sameForAll = helper.randomize(this.test.title);
       var results = [];
       var al = newPerson(49, 'Al');
@@ -627,7 +643,7 @@ describe("Streaming Queries", function() {
           results.push(e);
         });
 
-        return helper.sleep(t);
+        return expectSubscription();
       }).then(function() {
         expect(results.length).to.be.equal(1);
         expect(results[0].operation).to.be.equal('none'); // initial match --> there was no operation on this objects
@@ -667,7 +683,7 @@ describe("Streaming Queries", function() {
     });
 
     it("should return inserted object", function() {
-      this.timeout(10000);
+      this.timeout(20000);
       sameForAll = helper.randomize(this.test.title);
       var result;
       query = db[bucket].find().equal('testID', sameForAll);
@@ -676,7 +692,7 @@ describe("Streaming Queries", function() {
         result = e;
       });
 
-      return helper.sleep(t).then(function() {
+      return expectSubscription().then(function() {
         var event = expectEvent();
         insertPerson(29, "franz");
         return event;
@@ -692,7 +708,7 @@ describe("Streaming Queries", function() {
     });
 
     it("should resolve references from real-time matches", function() {
-      this.timeout(10000);
+      this.timeout(20000);
       sameForAll = helper.randomize(this.test.title);
       var franz, otherFranz;
 
@@ -710,7 +726,9 @@ describe("Streaming Queries", function() {
 
       var person = newPerson(20, "franz");
       // we don't wait for events, because we have to streams here and not only a single one
-      return helper.sleep(t, person.insert()).then(function() {
+      return expectSubscription().then(function() {
+        return helper.sleep(t, person.insert());
+      }).then(function() {
         expect(franz).to.be.ok;
         expect(otherFranz).to.be.ok;
         expect(franz.name).to.be.equal("franz");
@@ -747,7 +765,7 @@ describe("Streaming Queries", function() {
     });
 
     it("should return removed object", function() {
-      this.timeout(10000);
+      this.timeout(20000);
       sameForAll = helper.randomize(this.test.title);
       var result;
       query = db[bucket].find().equal('testID', sameForAll);
@@ -757,7 +775,7 @@ describe("Streaming Queries", function() {
       });
 
       var person = newPerson();
-      return helper.sleep(t).then(function() {
+      return expectSubscription().then(function() {
         var event = expectNoEvent();
         person.insert();
         return event;
@@ -775,7 +793,7 @@ describe("Streaming Queries", function() {
     });
 
     it("should return all changes", function() {
-      this.timeout(10000);
+      this.timeout(20000);
       sameForAll = helper.randomize(this.test.title);
       var results = [];
       query = db[bucket].find().equal('testID', sameForAll);
@@ -786,7 +804,7 @@ describe("Streaming Queries", function() {
 
       var person = newPerson(29, 'Felix');
 
-      return helper.sleep(t).then(function() {
+      return expectSubscription().then(function() {
         var event = expectEvent();
         person.insert();
         return event;
@@ -809,7 +827,7 @@ describe("Streaming Queries", function() {
     });
 
     it("should allow multiple listeners", function() {
-      this.timeout(10000);
+      this.timeout(20000);
       sameForAll = helper.randomize(this.test.title);
       var received = [];
       var person = newPerson(33);
@@ -824,7 +842,7 @@ describe("Streaming Queries", function() {
       subscription = stream.subscribe(listener);
       otherSubscription = stream.subscribe(listener);
 
-      return helper.sleep(t).then(function() {
+      return expectSubscription().then(function() {
         var event = expectEvent();
         person.insert();
         return event;
@@ -840,7 +858,7 @@ describe("Streaming Queries", function() {
     });
 
     it("should return the initial result", function() {
-      this.timeout(10000);
+      this.timeout(20000);
       sameForAll = helper.randomize(this.test.title);
       var people = [newPerson(), newPerson(), newPerson(), newPerson()];
       return helper.sleep(t, Promise.all(people.map(function(p) {
@@ -853,7 +871,7 @@ describe("Streaming Queries", function() {
           received.push(e);
         });
 
-        return helper.sleep(t).then(function() {
+        return expectSubscription().then(function() {
           expect(received.length).to.be.equal(3);
           return received.forEach(function(result) {
             expect(result.matchType).to.be.equal("add");
@@ -867,7 +885,7 @@ describe("Streaming Queries", function() {
     });
 
     it("should cancel serverside subscription", function() {
-      this.timeout(10000);
+      this.timeout(20000);
       sameForAll = helper.randomize(this.test.title);
 
       var socket;
@@ -918,7 +936,7 @@ describe("Streaming Queries", function() {
     });
 
     it("should allow to unregister by unsubscribing subscription", function() {
-      this.timeout(10000);
+      this.timeout(20000);
       sameForAll = helper.randomize(this.test.title);
       var calls = 0;
       var listener = function(e) {
@@ -932,7 +950,7 @@ describe("Streaming Queries", function() {
       subscription = stream.subscribe(listener);
 
       var john = newPerson(20);
-      return helper.sleep(t).then(function() {
+      return expectSubscription().then(function() {
         var event = expectEvent();
         john.insert();
         return event;
@@ -947,7 +965,7 @@ describe("Streaming Queries", function() {
     });
 
     it("should raise error on subscription: limit + offset must not exceed 500 on order-by", function() {
-      this.timeout(10000);
+      this.timeout(20000);
       sameForAll = helper.randomize(this.test.title);
       var next = 0;
       var errors = 0;
@@ -989,7 +1007,7 @@ describe("Streaming Queries", function() {
       });
 
       it("should only be called once", function() {
-        this.timeout(10000);
+        this.timeout(20000);
         sameForAll = helper.randomize(this.test.title);
         query = db[bucket].find().equal('testID', sameForAll);
         stream = query.eventStream();
@@ -1001,7 +1019,9 @@ describe("Streaming Queries", function() {
 
         // waiting for events does not work, because of interference between subscribing and unsubscribing
         var john = newPerson(49);
-        return helper.sleep(t, john.insert()).then(function() {
+        return helper.sleep(t).then(function() {
+          return helper.sleep(t, john.insert());
+        }).then(function() {
           expect(calls).to.be.equal(1);
           john.age = 50;
           return helper.sleep(t, john.save());
@@ -1011,7 +1031,7 @@ describe("Streaming Queries", function() {
       });
 
       it("should compute aggregate: average", function() {
-        this.timeout(10000);
+        this.timeout(20000);
         sameForAll = helper.randomize(this.test.title);
         query = db[bucket].find().equal('testID', sameForAll);
         stream = query.eventStream();
@@ -1074,7 +1094,7 @@ describe("Streaming Queries", function() {
     var maintainedResult, expectedResult = [], offset = 5, limit = 10;
 
     before(function() {
-      this.timeout(10000);
+      this.timeout(20000);
       return clearAll().then(function() {
         var inserts = 'abcdefghijklmnopqrst'.split('').map(function(char) {
           return insert(new db[bucket]({
@@ -1165,7 +1185,7 @@ describe("Streaming Queries", function() {
       });
     }
 
-    it('should stream matching insert', function() {
+    it('should stream matching insert', function() { this.timeout(4000);
       var obj = new db[bucket]({
         age: 49,
         surname: expectedResult[2].surname + 'a'
@@ -1178,7 +1198,7 @@ describe("Streaming Queries", function() {
       });
     });
 
-    it('should not stream none matching insert', function() {
+    it('should not stream none matching insert', function() { this.timeout(4000);
       var obj = new db[bucket]({
         age: 48,
         surname: 'btest'
@@ -1189,7 +1209,7 @@ describe("Streaming Queries", function() {
       return expect(waitOn()).rejectedWith('timed out');
     });
 
-    it('should stream matching offset insert', function() {
+    it('should stream matching offset insert', function() { this.timeout(4000);
       var obj = new db[bucket]({
         age: 49,
         surname: 'aaa'
@@ -1203,7 +1223,7 @@ describe("Streaming Queries", function() {
       });
     });
 
-    it('should not stream matching behind limit insert', function() {
+    it('should not stream matching behind limit insert', function() { this.timeout(4000);
       var obj = new db[bucket]({
         age: 49,
         surname: 'zzz'
@@ -1214,7 +1234,7 @@ describe("Streaming Queries", function() {
       return expect(waitOn()).rejectedWith('timed out');
     });
 
-    it('should stream updated object within limit', function() {
+    it('should stream updated object within limit', function() { this.timeout(4000);
       var obj = maintainedResult[2];
       obj.surname = maintainedResult[3].surname + 'b';
 
@@ -1226,7 +1246,7 @@ describe("Streaming Queries", function() {
       })
     });
 
-    it('should not stream updated object within offset', function() {
+    it('should not stream updated object within offset', function() { this.timeout(4000);
       var obj = expectedResult[1];
       obj.surname = expectedResult[1].surname + 'c';
 
@@ -1235,7 +1255,7 @@ describe("Streaming Queries", function() {
       return expect(waitOn()).rejectedWith('timed out');
     });
 
-    it('should not stream updated object behind limit', function() {
+    it('should not stream updated object behind limit', function() { this.timeout(4000);
       var obj = expectedResult[expectedResult.length - 2];
       obj.surname = expectedResult[expectedResult.length - 1].surname + 'd';
 
@@ -1244,7 +1264,7 @@ describe("Streaming Queries", function() {
       return expect(waitOn()).rejectedWith('timed out');
     });
 
-    it('should stream updated object moved from result to offset', function() {
+    it('should stream updated object moved from result to offset', function() { this.timeout(4000);
       var obj = maintainedResult[2];
       var newObj = expectedResult[offset - 1];
       obj.surname = expectedResult[1].surname + 'e';
@@ -1259,7 +1279,7 @@ describe("Streaming Queries", function() {
       })
     });
 
-    it('should stream updated object moved from offset to result', function() {
+    it('should stream updated object moved from offset to result', function() { this.timeout(4000);
       var obj = expectedResult[2];
       var droppedObj = maintainedResult[0];
       obj.surname = droppedObj.surname + 'f';
@@ -1273,7 +1293,7 @@ describe("Streaming Queries", function() {
       })
     });
 
-    it('should stream updated object moved from result to behind limit', function() {
+    it('should stream updated object moved from result to behind limit', function() { this.timeout(4000);
       var obj = maintainedResult[8];
       var addObj = expectedResult[offset + limit];
       obj.surname = expectedResult[expectedResult.length - 3].surname + 'g';
@@ -1287,7 +1307,7 @@ describe("Streaming Queries", function() {
       })
     });
 
-    it('should stream updated object moved from behind limit to result', function() {
+    it('should stream updated object moved from behind limit to result', function() { this.timeout(4000);
       var obj = expectedResult[expectedResult.length - 2];
       var droppedObj = maintainedResult[limit - 1];
       obj.surname = maintainedResult[2].surname + 'h';
@@ -1301,7 +1321,7 @@ describe("Streaming Queries", function() {
       })
     });
 
-    it('should stream updated object none matching -> result', function() {
+    it('should stream updated object none matching -> result', function() { this.timeout(4000);
       var obj = new db[bucket]({
         age: 48,
         surname: maintainedResult[3].surname + 'h'
@@ -1321,7 +1341,7 @@ describe("Streaming Queries", function() {
       });
     });
 
-    it('should stream updated object none matching -> offset', function() {
+    it('should stream updated object none matching -> offset', function() { this.timeout(4000);
       var obj = new db[bucket]({
         age: 48,
         surname: expectedResult[1].surname + 'i'
@@ -1343,7 +1363,7 @@ describe("Streaming Queries", function() {
       });
     });
 
-    it('should stream updated object none matching -> behind limit', function() {
+    it('should stream updated object none matching -> behind limit', function() { this.timeout(4000);
       var obj = new db[bucket]({
         age: 48,
         surname: expectedResult[expectedResult.length - 1].surname + 'j'
@@ -1358,7 +1378,7 @@ describe("Streaming Queries", function() {
       });
     });
 
-    it('should stream updated object result -> none matching', function() {
+    it('should stream updated object result -> none matching', function() { this.timeout(4000);
       var obj = maintainedResult[3];
       var addObj = expectedResult[offset + limit];
 
@@ -1373,7 +1393,7 @@ describe("Streaming Queries", function() {
       })
     });
 
-    it('should stream updated object offset -> none matching', function() {
+    it('should stream updated object offset -> none matching', function() { this.timeout(4000);
       var obj = expectedResult[3];
       var droppedObj = maintainedResult[0];
       var addObj = expectedResult[offset + limit];
@@ -1390,7 +1410,7 @@ describe("Streaming Queries", function() {
       })
     });
 
-    it('should not stream updated object behind limit -> none matching', function() {
+    it('should not stream updated object behind limit -> none matching', function() { this.timeout(4000);
       var obj = expectedResult[expectedResult.length - 2];
 
       obj.age = 10;
@@ -1400,7 +1420,7 @@ describe("Streaming Queries", function() {
       return expect(waitOn()).rejectedWith('timed out');
     });
 
-    it('should stream deleted object in result', function() {
+    it('should stream deleted object in result', function() { this.timeout(4000);
       var obj = maintainedResult[3];
       var addObj = expectedResult[offset + limit];
 
@@ -1413,7 +1433,7 @@ describe("Streaming Queries", function() {
       })
     });
 
-    it('should stream deleted object in offset', function() {
+    it('should stream deleted object in offset', function() { this.timeout(4000);
       var obj = expectedResult[3];
       var droppedObj = maintainedResult[0];
       var addObj = expectedResult[offset + limit];
@@ -1428,7 +1448,7 @@ describe("Streaming Queries", function() {
       })
     });
 
-    it('should not stream deleted object behind limit', function() {
+    it('should not stream deleted object behind limit', function() { this.timeout(4000);
       var obj = expectedResult[expectedResult.length - 2];
 
       remove(obj);
@@ -1436,7 +1456,7 @@ describe("Streaming Queries", function() {
       return expect(waitOn()).rejectedWith('timed out');
     });
 
-    it('should stream external inserted object', function() {
+    it('should stream external inserted object', function() { this.timeout(4000);
       var obj = new otherDb[bucket]({
         age: 49,
         name: 'Inserted',
@@ -1455,7 +1475,7 @@ describe("Streaming Queries", function() {
       });
     });
 
-    it('should stream external updated object', function() {
+    it('should stream external updated object', function() { this.timeout(4000);
       otherDb[bucket].load(maintainedResult[2].id).then(function(obj) {
         obj.name = 'TestName';
         return obj.save();
@@ -1467,7 +1487,7 @@ describe("Streaming Queries", function() {
       });
     });
 
-    it('should stream external deleted object', function() {
+    it('should stream external deleted object', function() { this.timeout(4000);
       var droppedObj = maintainedResult[2];
 
       otherDb[bucket].load(droppedObj.id).then(function(obj) {
@@ -1568,24 +1588,24 @@ describe("Streaming Queries", function() {
       expect(otherCompletions).to.be.equal(0);
       expect(otherErrors).to.be.equal(1);
     })/*.catch(function() {
-      removeItems();
-      expect(0).to.be.equal(1);
-    })*/;
+     removeItems();
+     expect(0).to.be.equal(1);
+     })*/;
   });
 
   it("should work with minimal signature", function() {
-    this.timeout(6000);
+    this.timeout(12000);
 
     var result;
-    subscription = db[bucket].find().matches('name', /^signature test/)
+    query = db[bucket].find().matches('name', /^signature test/)
         .ascending('name')
         .descending('active')
-        .limit(3).resultStream(function(r) {
-          result = r;
-        });
+        .limit(3);
+    subscription = query.resultStream(function(r) {
+      result = r;
+    });
 
-
-    return helper.sleep(t).then(function() {
+    return expectSubscription().then(function() {
       expect(result.length).to.be.equal(0);
       var todo1 = new db[bucket]({name: 'signature test 1'});
       return helper.sleep(t, todo1.save());
@@ -1595,7 +1615,7 @@ describe("Streaming Queries", function() {
   });
 
   it("should resume resultStream after disconnect", function() {
-    this.timeout(6000);
+    this.timeout(12000);
 
     var result, otherResult;
     var completions = 0, otherCompletions = 0, errors = 0, otherErrors = 0;
@@ -1625,7 +1645,7 @@ describe("Streaming Queries", function() {
     otherSubscription = query.resultStream({reconnects: -1}, onOtherNext, onOtherError, onOtherComplete);
 
 
-    return helper.sleep(t).then(function() {
+    return expectSubscription().then(function() {
       expect(result.length).to.be.equal(0);
       expect(otherResult.length).to.be.equal(0);
       var todo1 = new db[bucket]({name: 'reconnection test 1'});
@@ -1657,7 +1677,7 @@ describe("Streaming Queries", function() {
   });
 
   it("should resume resultStream specific number of times after disconnect", function() {
-    this.timeout(10000);
+    this.timeout(20000);
 
     var result, otherResult;
     var completions = 0, otherCompletions = 0, errors = 0, otherErrors = 0;
@@ -1686,7 +1706,7 @@ describe("Streaming Queries", function() {
     subscription = query.resultStream({reconnects: 2}, onNext, onError, onComplete);
     otherSubscription = query.resultStream({reconnects: 0}, onOtherNext, onOtherError, onOtherComplete);
 
-    return helper.sleep(t).then(function() {
+    return expectSubscription().then(function() {
       expect(result.length).to.be.equal(0);
       expect(otherResult.length).to.be.equal(0);
       var todo1 = new db[bucket]({name: 'reconnection count test 1'});

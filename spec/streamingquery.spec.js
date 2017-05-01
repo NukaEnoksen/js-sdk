@@ -13,7 +13,7 @@ describe("Streaming Queries", function() {
   }
 
   var Stream = DB.query.Stream;
-  var t = 2000;
+  var t = 1000;
   var bucket = helper.randomize("StreamingQueryPerson");
   var emf, metamodel, db, otherDb, query, otherQuery, stream, otherStream, subscription, otherSubscription, websocket, otherWebsocket;
   var sameForAll = helper.randomize("same for all persons in the current test");

@@ -13,7 +13,7 @@ describe("Streaming Queries", function() {
   }
 
   var Stream = DB.query.Stream;
-  var t = 1000;
+  var t = 2000;
   var bucket = helper.randomize("StreamingQueryPerson");
   var emf, metamodel, db, otherDb, query, otherQuery, stream, otherStream, subscription, otherSubscription, websocket, otherWebsocket;
   var sameForAll = helper.randomize("same for all persons in the current test");
@@ -1605,7 +1605,7 @@ describe("Streaming Queries", function() {
       result = r;
     });
 
-    return expectSubscription().then(function() {
+    return helper.sleep(t).then(function() {
       expect(result.length).to.be.equal(0);
       var todo1 = new db[bucket]({name: 'signature test 1'});
       return helper.sleep(t, todo1.save());

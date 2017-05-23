@@ -40,13 +40,13 @@ describe("Streaming Queries", function() {
         sub.unsubscribe();
         setTimeout(function() {
           resolve(e);
-        }, 100);
+        }, 10); // wait that all observers are called
       });
 
       setTimeout(function() {
         sub.unsubscribe();
         reject(new Error('Wait on subscription timed out.'));
-      }, t);
+      }, 5000);
     });
   }
 

@@ -64,6 +64,23 @@ module.exports = function (grunt) {
           'dist/baqend.js': ['lib/index.js'],
           'dist/baqend-realtime.js': ['realtime/index.js']
         }
+      },
+
+      serviceWorker: {
+        files: {
+          'dist/service-worker/external-sw.js': ['service-worker/external-service-worker.js'],
+          'dist/service-worker/makefast-sw.js': ['service-worker/makefast-worker.js'],
+          'dist/service-worker/baqend-sw.js': ['service-worker/baqend-worker.js']
+        },
+        options: {
+          banner: banner,
+          transform: false,
+          plugin: ['bundle-collapser/plugin'],
+          browserifyOptions: {
+            builtins: [],
+            ignoreTransform: []
+          }
+        },
       }
     },
 

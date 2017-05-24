@@ -74,11 +74,11 @@ module.exports = function (grunt) {
         },
         options: {
           banner: banner,
-          transform: false,
-          plugin: ['bundle-collapser/plugin'],
+          transform: [],
+          plugin: [],
           browserifyOptions: {
             builtins: [],
-            ignoreTransform: []
+            ignoreTransform: ['babelify']
           }
         },
       }

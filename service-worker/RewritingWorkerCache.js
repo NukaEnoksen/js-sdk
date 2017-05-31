@@ -4,6 +4,7 @@ class RewritingWorkerCache extends BaqendServiceWorkerCache {
 
   constructor(whiteList, prefix, serviceWorkerFileName) {
     super(whiteList);
+    this.prefix = prefix
     this.apiPrefix = `${prefix}v1/`;
     this.assetPrefix = `${this.apiPrefix}asset/`;
     this.swUrl = `${this.prefix}{serviceWorkerFileName}`;

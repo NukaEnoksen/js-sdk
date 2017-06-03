@@ -8,25 +8,41 @@ const crypto = require('crypto');
 const opn = require('opn');
 const algorithm = 'aes-256-ctr';
 const password = 'N2Ki=za[8iy4ff4jYn/3,y;';
-
 const bbqHost = 'bbq';
 let host;
 let app;
 
-function login(args, persist) {
+function persistLogin(args) {
+  let inputPromise = getArgsCredentials(args);
+
+  if (!inputPromise) {
+    showLoginInfo();
+    inputPromise = readInputCredentials();
+  }
+
+  return inputPromise.then(credentials => {
+    return connect(host, credentials[0], credentials[1]).then(() =>  saveCredentials(credentials[0], credentials[1]))
+  }).then(() => console.log('You have successfully been logged in.'), e => console.log(e.message || e))
+}
+
+function getArgsCredentials(args) {
   if (args.host && args.app) {
     throw new Error('Only app or host parameter is allowed.');
   }
+
   host = args.host || bbqHost;
   app = args.app;
 
-  let inputPromise;
   if (args.username && args.password) {
-    inputPromise = Promise.resolve([args.username, args.password]);
-  } else if (persist) {
-    showLoginInfo();
-    inputPromise = readInputCredentials();
-  } else {
+    return Promise.resolve([args.username, args.password]);
+  }
+
+  return null;
+}
+
+function login(args) {
+  let inputPromise = getArgsCredentials(args || {});
+  if (!inputPromise){
     inputPromise = readFile().then((json) => {
       if (json[host] && json[host].password && json[host].username) {
         return [json[host].username, json[host].password];
@@ -39,18 +55,12 @@ function login(args, persist) {
   }
 
   return inputPromise.then((credentials) => {
-    return dbLogin(credentials[0], credentials[1]).then((db) => [credentials, db]);
-  }).then((args) => {
-    let credentials = args[0];
-    let db = args[1];
-    if (persist) {
-      return saveCredentials(credentials[0], credentials[1]);
-    }
-    return db;
+    return dbLogin(credentials[0], credentials[1]);
   });
 }
 
 module.exports.login = login;
+module.exports.persistLogin = persistLogin;
 
 module.exports.register = function() {
   host = bbqHost;
@@ -73,9 +83,9 @@ module.exports.logout = function(args) {
 
 module.exports.openApp = function(app) {
   if (app) {
-    opn(`https://${app}.app.baqend.com`)
+    return opn(`https://${app}.app.baqend.com`)
   } else {
-    return login({}, false).then(db => {
+    return login({}).then(db => {
       opn(`https://${db._connector.host}`);
     }).catch(e => console.log(e.message || e));
   }
@@ -94,6 +104,31 @@ module.exports.openDashboard = function() {
   })
 };
 
+module.exports.listApps = function() {
+  host = bbqHost;
+
+  return readFile().then(json => {
+    if (!json || !json[host]) {
+      throw new Error("You are not logged in.");
+    }
+    return connect(host, json[host].username, json[host].password)
+  }).then(db =>  db.modules.get('apps'))
+    .then(apps => apps.forEach(app => console.log(app.name)))
+    .catch(e => console.log(e.message || e));
+};
+
+module.exports.whoami = function(args) {
+  host = args.host || bbqHost;
+
+  return readFile().then(json => {
+    if (!json) {
+      throw new Error();
+    }
+
+    return connect(host, json[host].username, json[host].password);
+  }).then(db => console.log(db.User.me.username), () => console.log('You are not logged in.'));
+};
+
 function getDefaultApp(db) {
   return db.modules.get('apps').then(apps => {
     if (apps.length === 1) {
@@ -101,7 +136,7 @@ function getDefaultApp(db) {
     }
     throw new Error('Please add the name of your app as a parameter.');
   });
-};
+}
 
 function showLoginInfo() {
   console.log('If you have created your Baqend Account with OAuth:');

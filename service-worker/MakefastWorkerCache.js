@@ -3,17 +3,18 @@ const RewritingWorkerCache = require('./RewritingWorkerCache');
 class MakefastWorkerCache extends RewritingWorkerCache {
 
   constructor() {
-    super([], ['pagead2.googlesyndication.com', 'de.ioam.de', 'securepubads.g.doubleclick.net', 'tpc.googlesyndication.com', 'vrt.outbrain.com', 'www.facebook.com', 'www.google-analytics.com', 's400.meetrics.net', 'ad.doubleclick.net'], 'https://snowy-popeseyesteak-352.app.baqend.com/', 'baqendWorker.js');
+    const blacklist = [];
+    super([], blacklist, 'https://snowy-popeseyesteak-352.app.baqend.com/', 'baqendWorker.js');
     this.BASE_PATH_REQUEST = new Request('https://jngiopdfg893475234hrtwe8rfhq3htn/');
     this.CACHE_NAME = 'baqend';
   }
 
   shouldHandle(request) {
-    const superShouldHandle = super.shouldHandle(request);
+    const isRelative = request.url.startsWith(this.prefix);
     const isMain = request.url === this.prefix;
     const isMainImage = request.url === (this.prefix + '+img/flyingq-hd-opt.png');
 
-    return superShouldHandle && !isMain && !isMainImage;
+    return isRelative || super.shouldHandle(request) && !isMain && !isMainImage;
   }
 
   async rewriteRequest(request) {
@@ -30,7 +31,15 @@ class MakefastWorkerCache extends RewritingWorkerCache {
 
       const basePath = await this.getBase(relativeUrl);
       if (relativeUrl.startsWith('?url=')) {
-        relativeUrl = this.decodeUrl(relativeUrl).replace('&', '?');
+        const params = this.parseParams(relativeUrl);
+        relativeUrl = params['url'];
+
+        if (params['blist']) {
+          this.setBlacklist(params['blist'].split(', '));
+        }
+        if (params['wlist']) {
+          this.setWhitelist(params['wlist'].split(', '));
+        }
       }
 
       const fullUrlMatcher = new RegExp('^(https?\:\/\/)?' + basePath + '.*', 'i');
@@ -73,6 +82,20 @@ class MakefastWorkerCache extends RewritingWorkerCache {
   rewriteUrl(url) {
     const newUrl = `${this.assetPrefix}${url.replace(/https?:\/\//, '')}`;
     return new Request(newUrl);
+  }
+
+  parseParams(url) {
+    const a = url.substr(url.indexOf('?') + 1).split('&');
+    if (a === "") return {};
+    const b = {};
+    for (let i = 0; i < a.length; ++i) {
+      const p = a[i].split('=', 2);
+      if (p.length == 1)
+        b[p[0]] = "";
+      else
+        b[p[0]] = decodeURIComponent(p[1].replace(/\+/g, " "));
+    }
+    return b;
   }
 }
 

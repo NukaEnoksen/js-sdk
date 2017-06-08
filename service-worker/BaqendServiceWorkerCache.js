@@ -2,13 +2,21 @@ const CACHE_NAME = 'baqend';
 
 class BaqendServiceWorkerCache {
 
-  constructor(whiteList, blackList) {
-    this.whiteList = whiteList;
-    this.blackList = blackList;
+  constructor(whitelist, blacklist) {
+    this.whitelist = whitelist;
+    this.blacklist = blacklist;
   }
 
   setBloomFilter(bloomFilter) {
     this.bloomFilter = bloomFilter;
+  }
+
+  setWhitelist(whitelist) {
+    this.whitelist = whitelist;
+  }
+
+  setBlacklist(blacklist) {
+    this.blacklist = blacklist;
   }
 
   async handleRequest(request) {
@@ -34,11 +42,11 @@ class BaqendServiceWorkerCache {
     const isGet = request.method === 'GET' || request.method === 'HEAD';
     const isHTTP = request.url.startsWith('http');
 
-    const hasBlackList = this.blackList && this.blackList.length;
-    const hasWhiteList = this.whiteList&& this.whiteList.length;
+    const hasBlackList = this.blacklist && this.blacklist.length;
+    const hasWhiteList = this.whitelist&& this.whitelist.length;
 
-    const onBlackList = hasBlackList && this.blackList.some(domain => request.url.includes(domain));
-    const onWhiteList = hasWhiteList && this.whiteList.some(domain => request.url.includes(domain));
+    const onBlackList = hasBlackList && this.blacklist.some(domain => request.url.includes(domain));
+    const onWhiteList = hasWhiteList && this.whitelist.some(domain => request.url.includes(domain));
 
     return isGet && isHTTP && !onBlackList && (!hasWhiteList || onWhiteList);
   }

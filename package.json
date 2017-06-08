@@ -1,6 +1,6 @@
 {
   "name": "baqend",
-  "version": "2.6.5-0",
+  "version": "2.7.2-0",
   "description": "Baqend JavaScript SDK",
   "license": "MIT",
   "author": {
@@ -12,9 +12,7 @@
   "browser": {
     "./index.js": "./dist/baqend.js",
     "./realtime.js": "./dist/baqend-realtime.js",
-    "./lib/util/atob.js": "./lib/util/atob-browser.js",
-    "./lib/util/is-node.js": "./lib/util/is-node-browser.js",
-    "./lib/util/hmac.js": "./lib/util/hmac-browser.js",
+    "./lib/util/util.js": "./lib/util/util-browser.js",
     "./realtime/connector/websocket.js": "./realtime/connector/websocket-browser.js",
     "./lib/connector/NodeConnector": false
   },
@@ -86,6 +84,7 @@
     "mocha": "^3.0.2",
     "mocha-jenkins-reporter": "^0.2.4",
     "phantomjs-prebuilt": "^2.1.12",
+    "request": "^2.81.0",
     "shelljs": "^0.7.4",
     "through2": "^2.0.1",
     "typescript": "^2.0.8",
@@ -99,7 +98,7 @@
     "release": "node scripts/release",
     "typings": "npm run typings-generate && npm run typings-test",
     "typings-generate": "jsdoc -t tpl/typings -r lib realtime -d index.d.ts",
-    "typings-test": "tsc --target es6 --noImplicitAny -m commonjs spec-ts/streaming.spec.ts spec-ts/streaming.spec.ts ",
+    "typings-test": "tsc --target es6 --noImplicitAny -m commonjs spec-ts/typings.spec.ts spec-ts/realtime.spec.ts",
     "jsdoc": "jsdoc -t tpl/theme -r lib realtime -c tpl/jsdoc.conf.json --package package.json -d doc",
     "baqend": "node cli/index.js"
   },

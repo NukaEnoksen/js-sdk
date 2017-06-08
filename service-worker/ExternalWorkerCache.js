@@ -3,7 +3,7 @@ const RewritingWorkerCache = require('./RewritingWorkerCache');
 class ExternalWorkerCache extends RewritingWorkerCache {
 
   constructor(event) {
-    super(event.data.whiteList, `https://${event.data.appName}.app.baqend.com/`, 'external-sw.js');
+    super(event.data.whiteList, event.data.blackList, `https://${event.data.appName}.app.baqend.com/`, 'external-sw.js');
   }
 
   async rewriteRequest(request) {

@@ -1,3 +1,4 @@
+const BloomFilter = require('../lib/caching/BloomFilter');
 class BloomFilterRefresher {
 
   constructor(serviceWorkerCache, bloomFilterUrl, refreshInterval) {
@@ -33,6 +34,7 @@ class BloomFilterRefresher {
       this.bloomFilterLoading = false;
       return true;
     } catch (err) {
+      console.error(err);
       setTimeout(() => this.bloomFilterLoading = false, 5000);
       return false;
     }

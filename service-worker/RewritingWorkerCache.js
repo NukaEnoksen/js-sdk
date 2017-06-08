@@ -1,25 +1,27 @@
-const BaqendServiceWorkerCache = require('./BaqendSWCache');
+const BaqendServiceWorkerCache = require('./BaqendServiceWorkerCache');
 
 class RewritingWorkerCache extends BaqendServiceWorkerCache {
 
-  constructor(whiteList, prefix, serviceWorkerFileName) {
-    super(whiteList);
-    this.prefix = prefix
+  constructor(whiteList, blackList, prefix, serviceWorkerFileName) {
+    super(whiteList, blackList);
+    this.prefix = prefix;
     this.apiPrefix = `${prefix}v1/`;
     this.assetPrefix = `${this.apiPrefix}asset/`;
-    this.swUrl = `${this.prefix}{serviceWorkerFileName}`;
+    // TODO filter service worker url in should handle! Origin does not work in firefox :(
+    // this.swUrl = `${origin}/{serviceWorkerFileName}`;
   }
 
   getAppUrl() {
     return this.prefix;
   }
 
-  shouldHandle(request) {
-    const superShouldHandle = super.shouldHandle(request);
-    const isSW = request.url.startsWith(this.swUrl);
-
-    return superShouldHandle && !isSW;
-  }
+  // TODO filter service worker url in should handle! Origin does not work in firefox :(
+  // shouldHandle(request) {
+  //   const superShouldHandle = super.shouldHandle(request);
+  //   const isSW = request.url.startsWith(this.swUrl);
+  //
+  //   return superShouldHandle && !isSW;
+  // }
 
   extractUrl(url) {
     if (url.startsWith(this.assetPrefix)) {
@@ -29,15 +31,7 @@ class RewritingWorkerCache extends BaqendServiceWorkerCache {
   }
 
   getUrlForBloomFilter(request) {
-    // TODO this has changed since the server does hashing!!!
-    let url = request.url;
-    url = this.extractUrl(url);
-    url = btoa(url);
-    // Make base64 encoding url safe (same as in server)
-    url = url.replace('+', '-');
-    url = url.replace('/', '_');
-    url = `/file/_bq_assets/${url}`;
-    return url;
+    return this.extractUrl(request.url);
   }
 }
 

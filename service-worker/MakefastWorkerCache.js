@@ -3,7 +3,7 @@ const RewritingWorkerCache = require('./RewritingWorkerCache');
 class MakefastWorkerCache extends RewritingWorkerCache {
 
   constructor() {
-    super(null, 'https://makefast.baqend.com/', 'baqendWorker.js');
+    super([], ['pagead2.googlesyndication.com', 'de.ioam.de', 'securepubads.g.doubleclick.net', 'tpc.googlesyndication.com', 'vrt.outbrain.com', 'www.facebook.com', 'www.google-analytics.com', 's400.meetrics.net', 'ad.doubleclick.net'], 'https://snowy-popeseyesteak-352.app.baqend.com/', 'baqendWorker.js');
     this.BASE_PATH_REQUEST = new Request('https://jngiopdfg893475234hrtwe8rfhq3htn/');
     this.CACHE_NAME = 'baqend';
   }

@@ -1,10 +1,10 @@
-var BloomFilter = require('../lib/caching/BloomFilter');
 const CACHE_NAME = 'baqend';
 
 class BaqendServiceWorkerCache {
 
-  constructor(whiteList) {
+  constructor(whiteList, blackList) {
     this.whiteList = whiteList;
+    this.blackList = blackList;
   }
 
   setBloomFilter(bloomFilter) {
@@ -31,11 +31,16 @@ class BaqendServiceWorkerCache {
    * @returns {boolean} true if the url should be handled by the SW, false otherwiese.
    */
   shouldHandle(request) {
-    const isGet = request.method == 'GET' || request.method == 'HEAD';
+    const isGet = request.method === 'GET' || request.method === 'HEAD';
     const isHTTP = request.url.startsWith('http');
-    // TODO implement whitelist and/or blacklist
 
-    return isGet && isHTTP;
+    const hasBlackList = this.blackList && this.blackList.length;
+    const hasWhiteList = this.whiteList&& this.whiteList.length;
+
+    const onBlackList = hasBlackList && this.blackList.some(domain => request.url.includes(domain));
+    const onWhiteList = hasWhiteList && this.whiteList.some(domain => request.url.includes(domain));
+
+    return isGet && isHTTP && !onBlackList && (!hasWhiteList || onWhiteList);
   }
 
   /**
@@ -53,6 +58,7 @@ class BaqendServiceWorkerCache {
       return Promise.resolve(cachedResponse);
     }
 
+    console.log('Revalidating: ' + request.url);
     return this.fetchResponse(request);
   }
 
@@ -129,7 +135,6 @@ class BaqendServiceWorkerCache {
   /**
    * Fetches a response for the given request and caches it.
    * @param request The request to fetch the response for.
-   * @param revalidate A flag indicating whether to send a revalidation request or a normal get.
    * @returns {Promise.<Response>}
    */
   async fetchResponse(request) {

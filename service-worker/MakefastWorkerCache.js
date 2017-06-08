@@ -14,7 +14,7 @@ class MakefastWorkerCache extends RewritingWorkerCache {
     const isMain = request.url === this.prefix;
     const isMainImage = request.url === (this.prefix + '+img/flyingq-hd-opt.png');
 
-    return isRelative || super.shouldHandle(request) && !isMain && !isMainImage;
+    return (isRelative || super.shouldHandle(request)) && !isMain && !isMainImage;
   }
 
   async rewriteRequest(request) {

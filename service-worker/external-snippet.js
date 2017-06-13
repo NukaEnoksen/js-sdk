@@ -33,18 +33,11 @@ if ('serviceWorker' in navigator) {
     try {
       return tokenList.supports(token);
     } catch (e) {
-      // TODO remove!
-      if (e instanceof TypeError) {
-        console.log("The DOMTokenList doesn't have a supported tokens list");
-      } else {
-        console.error("That shouldn't have happened");
-      }
     }
   };
 
   const linkSupportsPreload = isTokenSupported(document.createElement("link").relList, "preload");
   if (!linkSupportsPreload) {
-    console.log('preload not supported, defaulting to prefetch!');
     let prefetch = document.createElement("link");
     prefetch.rel = "prefetch";
     prefetch.href = bloomFilterLink;

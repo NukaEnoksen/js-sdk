@@ -4,9 +4,13 @@ class MakefastWorkerCache extends RewritingWorkerCache {
 
   constructor() {
     const blacklist = [];
-    super([], blacklist, 'https://snowy-popeseyesteak-352.app.baqend.com/', 'baqendWorker.js');
+    super([], blacklist, 'https://flo-test3.app.baqend.com/', 'baqendWorker.js');
     this.BASE_PATH_REQUEST = new Request('https://jngiopdfg893475234hrtwe8rfhq3htn/');
     this.CACHE_NAME = 'baqend';
+  }
+
+  async handleRequest(request) {
+    return super.handleRequest(request);
   }
 
   shouldHandle(request) {
@@ -51,7 +55,7 @@ class MakefastWorkerCache extends RewritingWorkerCache {
 
   async getBase(url) {
     if (url.startsWith('?url=')) {
-      const requestedUrl = this.decodeUrl(url).replace(/https?:\/\//, '');
+      const requestedUrl = this.parseParams(url)['url'];
 
       let baseEndindex = requestedUrl.indexOf('/');
       if (baseEndindex === -1){
@@ -75,10 +79,6 @@ class MakefastWorkerCache extends RewritingWorkerCache {
     }
   }
 
-  decodeUrl(url) {
-    return decodeURIComponent(url.substring(url.indexOf('?url=') + 5, url.length));
-  }
-
   rewriteUrl(url) {
     const newUrl = `${this.assetPrefix}${url.replace(/https?:\/\//, '')}`;
     return new Request(newUrl);
@@ -96,6 +96,68 @@ class MakefastWorkerCache extends RewritingWorkerCache {
         b[p[0]] = decodeURIComponent(p[1].replace(/\+/g, " "));
     }
     return b;
+  }
+
+  async fetch(request) {
+    return this.injectIntoHTML(super.fetch(request), request)
+  }
+
+  async injectIntoHTML(responsePromise, request) {
+    const response = await responsePromise;
+
+    const isHTML = response.headers.get('Content-Type').includes('html');
+    if (isHTML) {
+      const base = await this.getBase(request.url);
+      let text = await response.text();
+      const content = text.replace('</head>',
+        `<script type="text/javascript">
+          function getEnclosingTag(el, tagName) {
+            tagName = tagName.toLowerCase();
+          
+            if (el.tagName && el.tagName.toLowerCase() === tagName) {
+              return el;
+            }
+          
+            while (el && el.parentNode) {
+              el = el.parentNode;
+              if (el.tagName && el.tagName.toLowerCase() === tagName) {
+                return el;
+              }
+            }
+          
+            return null;
+          }
+          document.addEventListener("DOMContentLoaded", function() {
+            document.body.addEventListener('click', function(e) {
+              const a = getEnclosingTag(e.target, 'a');
+              if (a) {
+                e.preventDefault();
+                const href = a.getAttribute('href');
+                const fullPath = a.href;
+                
+                const isRelative = href !== fullPath;
+                if (isRelative) {
+                  location.href = '${this.getAppUrl()}?url=' + encodeURIComponent('${base}' + href)
+                } else {
+                  location.href = '${this.getAppUrl()}?url=' + encodeURIComponent(href)
+                }
+              }
+            });
+          });
+        </script></head>`);
+
+
+      const newHeaders = {};
+      for (const pair of response.headers.entries()){
+        newHeaders[pair[0]] = pair[1];
+      }
+
+      return new Response(content, {
+        headers: newHeaders
+      });
+    } else {
+      return response;
+    }
   }
 }
 

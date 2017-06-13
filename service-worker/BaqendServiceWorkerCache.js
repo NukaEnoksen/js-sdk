@@ -66,8 +66,7 @@ class BaqendServiceWorkerCache {
       return Promise.resolve(cachedResponse);
     }
 
-    console.log('Revalidating: ' + request.url);
-    return this.fetchResponse(request);
+    return this.fetchAndCache(request);
   }
 
   /**
@@ -134,7 +133,7 @@ class BaqendServiceWorkerCache {
    */
   handleCacheMiss(request) {
     if (navigator.onLine) {
-      return this.fetchResponse(request);
+      return this.fetchAndCache(request);
     }
     // TODO what to return?
     throw new Error('Sorry - you are offline and there is no cached content');
@@ -145,13 +144,17 @@ class BaqendServiceWorkerCache {
    * @param request The request to fetch the response for.
    * @returns {Promise.<Response>}
    */
-  async fetchResponse(request) {
+  async fetchAndCache(request) {
+    const response = await this.fetch(request);
+    // caching the response async and returning a copy
+    this.cacheResponse(request, response);
+    return response.clone();
+  }
+
+  async fetch(request) {
     const revalidation = this.isInBloomFilter(request) ? 'reload' : 'default';
     const getRequest = new Request(request.url, {cache: revalidation});
-    const response = await fetch(getRequest);
-    // caching the response async and returning a copy
-    this.cacheResponse(getRequest, response);
-    return response.clone();
+    return fetch(getRequest);
   }
 
   /**

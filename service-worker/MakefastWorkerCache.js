@@ -4,9 +4,10 @@ class MakefastWorkerCache extends RewritingWorkerCache {
 
   constructor() {
     const blacklist = [];
-    super([], blacklist, 'https://flo-test3.app.baqend.com/', 'baqendWorker.js');
+    super([], blacklist, 'https://makefast-staging.app.baqend.com/', 'baqendWorker.js');
     this.BASE_PATH_REQUEST = new Request('https://jngiopdfg893475234hrtwe8rfhq3htn/');
     this.CACHE_NAME = 'baqend';
+    this.internalParams = ['url', 'blist', 'wlist'];
   }
 
   async handleRequest(request) {
@@ -32,11 +33,15 @@ class MakefastWorkerCache extends RewritingWorkerCache {
 
     if (isRelative) {
       let relativeUrl = url.substring(this.prefix.length);
-
       const basePath = await this.getBase(relativeUrl);
       if (relativeUrl.startsWith('?url=')) {
         const params = this.parseParams(relativeUrl);
         relativeUrl = params['url'];
+        for (const param of Object.entries(params)) {
+          if (!this.internalParams.includes(param[0])) {
+            relativeUrl = this.appendParam(relativeUrl, param[0], param[1]);
+          }
+        }
 
         if (params['blist']) {
           this.setBlacklist(params['blist'].split(', '));
@@ -46,6 +51,7 @@ class MakefastWorkerCache extends RewritingWorkerCache {
         }
       }
 
+
       const fullUrlMatcher = new RegExp('^(https?\:\/\/)?' + basePath + '.*', 'i');
       return fullUrlMatcher.test(relativeUrl) ? relativeUrl : basePath + '/' + relativeUrl;
     }
@@ -53,9 +59,14 @@ class MakefastWorkerCache extends RewritingWorkerCache {
     return Promise.resolve(url);
   }
 
+  appendParam(url, key, value) {
+    const separator = url.includes('?')? '&' : '?';
+    return `${url}${separator}${key}=${encodeURIComponent(value)}`;
+  }
+
   async getBase(url) {
     if (url.startsWith('?url=')) {
-      const requestedUrl = this.parseParams(url)['url'];
+      const requestedUrl = this.parseParams(url)['url'].replace(/https?:\/\//, '');
 
       let baseEndindex = requestedUrl.indexOf('/');
       if (baseEndindex === -1){

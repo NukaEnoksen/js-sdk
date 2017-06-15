@@ -3,8 +3,7 @@ const RewritingWorkerCache = require('./RewritingWorkerCache');
 class MakefastWorkerCache extends RewritingWorkerCache {
 
   constructor() {
-    const blacklist = [];
-    super([], blacklist, 'https://makefast-staging.app.baqend.com/', 'baqendWorker.js');
+    super([], [], 'https://makefast-staging.app.baqend.com/', 'baqendWorker.js');
     this.BASE_PATH_REQUEST = new Request('https://jngiopdfg893475234hrtwe8rfhq3htn/');
     this.CACHE_NAME = 'baqend';
     this.internalParams = ['url', 'blist', 'wlist'];
@@ -44,10 +43,10 @@ class MakefastWorkerCache extends RewritingWorkerCache {
         }
 
         if (params['blist']) {
-          this.setBlacklist(params['blist'].split(', '));
+          this.setBlacklist(params['blist'].split(','));
         }
         if (params['wlist']) {
-          this.setWhitelist(params['wlist'].split(', '));
+          this.setWhitelist(params['wlist'].split(','));
         }
       }
 
@@ -138,20 +137,24 @@ class MakefastWorkerCache extends RewritingWorkerCache {
           
             return null;
           }
+          function appendParam(url, key, value) {
+            const separator = url.includes('?')? '&' : '?';
+            return url + separator + key + '=' + encodeURIComponent(value);
+          }
           document.addEventListener("DOMContentLoaded", function() {
             document.body.addEventListener('click', function(e) {
               const a = getEnclosingTag(e.target, 'a');
-              if (a) {
+              if (a && a.href) {
                 e.preventDefault();
                 const href = a.getAttribute('href');
                 const fullPath = a.href;
                 
                 const isRelative = href !== fullPath;
-                if (isRelative) {
-                  location.href = '${this.getAppUrl()}?url=' + encodeURIComponent('${base}' + href)
-                } else {
-                  location.href = '${this.getAppUrl()}?url=' + encodeURIComponent(href)
-                }
+                let newUrl = '${this.getAppUrl()}?url=' + encodeURIComponent((isRelative? '${base}' : '') + href);
+                newUrl = ${this.blacklist.length > 0}? appendParam(newUrl, 'blist', '${this.blacklist}') : newUrl;
+                newUrl = ${this.whitelist.length > 0}? appendParam(newUrl, 'wlist', '${this.whitelist}') : newUrl;
+                
+                location.href = newUrl;
               }
             });
           });

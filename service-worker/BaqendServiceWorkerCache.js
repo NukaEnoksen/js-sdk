@@ -147,8 +147,8 @@ class BaqendServiceWorkerCache {
   async fetchAndCache(request) {
     const response = await this.fetch(request);
     // caching the response async and returning a copy
-    this.cacheResponse(request, response);
-    return response.clone();
+    await this.cacheResponse(request, response.clone());
+    return response;
   }
 
   async fetch(request) {
